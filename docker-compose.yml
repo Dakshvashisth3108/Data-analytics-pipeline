@@ -1,0 +1,113 @@
+# ───────────────────────────────────────────────────────────────────────────
+# Local Kafka + Zookeeper stack for HCM analytics
+#
+# Targets Docker Desktop on Windows 11 (WSL2 backend). Uses named volumes
+# rather than bind mounts so there are no Windows path / permission issues.
+#
+# Run:
+#   docker compose up -d            # start
+#   docker compose logs -f kafka    # tail kafka logs
+#   docker compose ps               # check health
+#   docker compose down             # stop, keep data
+#   docker compose down -v          # stop AND wipe persistent data
+#
+# Connect:
+#   * From your Windows host (Python/Spark on the host):
+#         bootstrap.servers = localhost:9092
+#   * From a sibling container on the same Docker network:
+#         bootstrap.servers = kafka:29092
+# ───────────────────────────────────────────────────────────────────────────
+
+networks:
+  hcm-net:
+    driver: bridge
+    name: hcm-net
+
+volumes:
+  zookeeper-data:
+  zookeeper-log:
+  kafka-data:
+
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.1
+    container_name: hcm-zookeeper
+    hostname: zookeeper
+    restart: unless-stopped
+    networks: [hcm-net]
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD-SHELL", "echo srvr | nc -w 2 localhost 2181 | grep -q Zookeeper"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: hcm-kafka
+    hostname: kafka
+    restart: unless-stopped
+    networks: [hcm-net]
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      # Host clients (Python/Spark running on Windows)
+      - "9092:9092"
+      # JMX for metrics
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # Two listeners:
+      #   PLAINTEXT       — internal, used by other containers on hcm-net
+      #                     (advertises kafka:29092)
+      #   PLAINTEXT_HOST  — external, used by clients on the Windows host
+      #                     (advertises localhost:9092)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Single-broker dev defaults — required because all internal topics
+      # default to RF=3 which can't be satisfied with one broker.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+
+      # Topic defaults
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168          # 7 days
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824     # 1 GiB
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+
+      # JMX
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+
+      # Heap — friendly default for laptop-class Docker Desktop
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 45s
