@@ -1,0 +1,125 @@
+# ───────────────────────────────────────────────────────────────
+# Local dev stack: Zookeeper, Kafka, Schema Registry, Kafka UI,
+# Spark master + worker, JupyterLab, Streamlit.
+# ───────────────────────────────────────────────────────────────
+version: "3.9"
+
+networks:
+  hcm:
+    driver: bridge
+
+volumes:
+  data: {}
+  logs: {}
+
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: hcm-zookeeper
+    networks: [hcm]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME:   2000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: hcm-kafka
+    networks: [hcm]
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 15s
+      retries: 10
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.1
+    container_name: hcm-schema-registry
+    networks: [hcm]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports: ["8081:8081"]
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: hcm-kafka-ui
+    networks: [hcm]
+    depends_on: [kafka, schema-registry]
+    ports: ["8080:8080"]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: hcm-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+
+  spark-master:
+    image: bitnami/spark:3.5.1
+    container_name: hcm-spark-master
+    networks: [hcm]
+    environment:
+      SPARK_MODE: master
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+    ports:
+      - "7077:7077"
+      - "8090:8080"
+
+  spark-worker:
+    image: bitnami/spark:3.5.1
+    container_name: hcm-spark-worker
+    networks: [hcm]
+    depends_on: [spark-master]
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 2G
+      SPARK_WORKER_CORES: 2
+
+  jupyter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.python
+    container_name: hcm-jupyter
+    networks: [hcm]
+    depends_on: [kafka, spark-master]
+    command: >
+      jupyter lab --ip=0.0.0.0 --port=8888 --no-browser
+      --NotebookApp.token='' --NotebookApp.password=''
+    ports: ["8888:8888"]
+    volumes:
+      - ../:/workspace
+    working_dir: /workspace
+
+  streamlit:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.python
+    container_name: hcm-streamlit
+    networks: [hcm]
+    depends_on: [kafka]
+    command: streamlit run streamlit_dashboard/app.py --server.address=0.0.0.0 --server.port=8501
+    ports: ["8501:8501"]
+    volumes:
+      - ../:/workspace
+    working_dir: /workspace

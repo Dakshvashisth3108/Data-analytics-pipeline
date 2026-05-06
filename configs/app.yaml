@@ -1,0 +1,53 @@
+# ───────────────────────────────────────────────────────────────
+# HCM Analytics — application config
+# Values can be overridden by environment variables of the same
+# uppercased name (e.g. KAFKA__BOOTSTRAP_SERVERS).
+# ───────────────────────────────────────────────────────────────
+
+env: local
+
+kafka:
+  bootstrap_servers: localhost:9092
+  schema_registry_url: http://localhost:8081
+  client_id: hcm-analytics
+  acks: all
+  compression_type: snappy
+  linger_ms: 20
+  retries: 5
+
+topics:
+  employees:    hcm.employees
+  attendance:   hcm.attendance
+  performance:  hcm.performance
+  recruitment:  hcm.recruitment
+
+# Local lakehouse layout — swap for s3a:// / abfss:// in prod
+lake:
+  root: ./data
+  bronze: ./data/bronze
+  silver: ./data/silver
+  gold:   ./data/gold
+  checkpoints: ./data/checkpoints
+
+spark:
+  master: "local[*]"
+  app_name: hcm-analytics
+  shuffle_partitions: 8
+  serializer: org.apache.spark.serializer.KryoSerializer
+  packages:
+    - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
+    - io.delta:delta-spark_2.12:3.2.0
+
+logging:
+  level: INFO
+  json: true
+  file: ./logs/hcm.log
+
+producer:
+  default_rate_per_sec: 25
+  seed: 42
+
+streaming:
+  trigger_interval: "30 seconds"
+  max_offsets_per_trigger: 50000
+  starting_offsets: latest

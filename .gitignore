@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Data lake (local)
+data/bronze/*
+data/silver/*
+data/gold/*
+data/checkpoints/*
+data/raw/*
+!data/**/.gitkeep
+
+# Logs
+logs/*.log
+logs/*.json
+!logs/.gitkeep
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Notebooks
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.iml

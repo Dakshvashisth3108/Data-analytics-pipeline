@@ -1,0 +1,20 @@
+# Shared Python image for producer / consumer / streamlit / jupyter
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# OpenJDK is required by PySpark
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        default-jdk-headless build-essential netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+
+WORKDIR /workspace
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt jupyterlab
+
+EXPOSE 8501 8888

@@ -1,0 +1,26 @@
+{
+  "type": "record",
+  "name": "Employee",
+  "namespace": "hcm",
+  "fields": [
+    {"name": "employee_id",      "type": "string"},
+    {"name": "first_name",       "type": ["null", "string"], "default": null},
+    {"name": "last_name",        "type": ["null", "string"], "default": null},
+    {"name": "email",            "type": ["null", "string"], "default": null},
+    {"name": "gender",           "type": ["null", "string"], "default": null},
+    {"name": "date_of_birth",    "type": ["null", {"type": "int", "logicalType": "date"}], "default": null},
+    {"name": "hire_date",        "type": ["null", {"type": "int", "logicalType": "date"}], "default": null},
+    {"name": "termination_date", "type": ["null", {"type": "int", "logicalType": "date"}], "default": null},
+    {"name": "department",       "type": ["null", "string"], "default": null},
+    {"name": "job_title",        "type": ["null", "string"], "default": null},
+    {"name": "grade",            "type": ["null", "string"], "default": null},
+    {"name": "manager_id",       "type": ["null", "string"], "default": null},
+    {"name": "location",         "type": ["null", "string"], "default": null},
+    {"name": "country",          "type": ["null", "string"], "default": null},
+    {"name": "employment_type",  "type": ["null", "string"], "default": null},
+    {"name": "base_salary",      "type": ["null", "double"], "default": null},
+    {"name": "currency",         "type": ["null", "string"], "default": null},
+    {"name": "is_active",        "type": ["null", "boolean"], "default": null},
+    {"name": "event_ts",         "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}
