@@ -1,20 +1,30 @@
 """CLI entrypoint for the HCM event simulator.
 
-Usage:
+Usage (preferred — module form):
     python -m producer.run --stream employees --rate 50 --duration 600
     python -m producer.run --stream attendance --rate 200
     python -m producer.run --stream all --rate 30
+
+Direct invocation also works thanks to the sys.path bootstrap below:
+    python producer/run.py --stream all --rate 30
 """
 from __future__ import annotations
 
 import argparse
 import signal
+import sys
 import time
+from pathlib import Path
+
+# Bootstrap so absolute imports resolve when run as a script.
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from utils import get_logger, load_config
 
-from .generators import HcmGenerator
-from .kafka_producer import HcmKafkaProducer
+from producer.generators import HcmGenerator
+from producer.kafka_producer import HcmKafkaProducer
 
 log = get_logger(__name__)
 

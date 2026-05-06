@@ -1,13 +1,25 @@
 """Thin wrapper around ``confluent_kafka.Producer``.
 
-* JSON serialisation
-* Async delivery with a callback that logs failures
-* Backpressure-aware: ``poll(0)`` every send + ``flush()`` on close
+This module is a **library** — it exposes the ``HcmKafkaProducer`` class
+used by other producers (e.g. ``producer.run``). It is **not** a CLI
+entry point. To stream data, run one of:
+
+    python -m producer.csv_to_kafka     # CSV file -> Kafka
+    python -m producer.run --stream all # synthetic Faker events -> Kafka
 """
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
 from typing import Any
+
+# Bootstrap so `from utils import ...` works when this module is imported
+# directly (e.g. `python producer/kafka_producer.py`) as well as via the
+# `producer` package.
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from confluent_kafka import Producer
 
@@ -46,3 +58,18 @@ class HcmKafkaProducer:
 
     def flush(self, timeout: float = 10.0) -> None:
         self._producer.flush(timeout)
+
+
+if __name__ == "__main__":
+    # This file is a library, not an entry point. Print a friendly
+    # redirect so users who run it by mistake don't get a silent no-op.
+    print(
+        "producer/kafka_producer.py is a library module (HcmKafkaProducer).\n"
+        "It is not meant to be run directly.\n"
+        "\n"
+        "To stream data, run one of:\n"
+        "  python -m producer.csv_to_kafka       # CSV  -> Kafka\n"
+        "  python -m producer.run --stream all   # synthetic Faker events\n",
+        file=sys.stderr,
+    )
+    sys.exit(2)
