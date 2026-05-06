@@ -1,15 +1,16 @@
-"""Spark schemas for the four HCM event streams."""
+"""Spark schemas for the HCM event streams."""
 from __future__ import annotations
 
 from pyspark.sql.types import (
-    StructType,
-    StructField,
-    StringType,
-    IntegerType,
-    DoubleType,
-    TimestampType,
-    DateType,
+    ArrayType,
     BooleanType,
+    DateType,
+    DoubleType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
 )
 
 EMPLOYEE_SCHEMA = StructType([
@@ -76,9 +77,30 @@ RECRUITMENT_SCHEMA = StructType([
     StructField("event_ts",        TimestampType(), False),
 ])
 
+# ── CSV-derived employee stream ──────────────────────────────────────────
+# Sent by ``producer.csv_to_kafka`` from the synthetic CSV. Bronze must be
+# permissive: ``salary`` and ``joining_date`` stay as raw strings because
+# the source CSV contains intentionally dirty values (e.g. "$50,000",
+# "31/02/2024", "N/A"). Cleansing and type-coercion happen in Silver.
+HCM_EMPLOYEE_CSV_SCHEMA = StructType([
+    StructField("employee_id",        StringType(),               True),
+    StructField("name",               StringType(),               True),
+    StructField("department",         StringType(),               True),
+    StructField("salary",             StringType(),               True),  # dirty — keep raw
+    StructField("joining_date",       StringType(),               True),  # dirty — keep raw
+    StructField("performance_rating", DoubleType(),               True),
+    StructField("manager",            StringType(),               True),
+    StructField("attrition",          StringType(),               True),
+    StructField("country",            StringType(),               True),
+    StructField("skills",             ArrayType(StringType()),    True),
+    StructField("experience",         DoubleType(),               True),
+])
+
+
 SCHEMAS_BY_STREAM: dict[str, StructType] = {
-    "employees":   EMPLOYEE_SCHEMA,
-    "attendance":  ATTENDANCE_SCHEMA,
-    "performance": PERFORMANCE_SCHEMA,
-    "recruitment": RECRUITMENT_SCHEMA,
+    "employees":    EMPLOYEE_SCHEMA,
+    "employee_csv": HCM_EMPLOYEE_CSV_SCHEMA,
+    "attendance":   ATTENDANCE_SCHEMA,
+    "performance":  PERFORMANCE_SCHEMA,
+    "recruitment":  RECRUITMENT_SCHEMA,
 }

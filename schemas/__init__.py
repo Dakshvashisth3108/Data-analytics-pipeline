@@ -8,6 +8,7 @@ the producers and the bronze/silver/gold layers.
 
 from .hcm_schemas import (
     EMPLOYEE_SCHEMA,
+    HCM_EMPLOYEE_CSV_SCHEMA,
     ATTENDANCE_SCHEMA,
     PERFORMANCE_SCHEMA,
     RECRUITMENT_SCHEMA,
@@ -16,6 +17,7 @@ from .hcm_schemas import (
 
 __all__ = [
     "EMPLOYEE_SCHEMA",
+    "HCM_EMPLOYEE_CSV_SCHEMA",
     "ATTENDANCE_SCHEMA",
     "PERFORMANCE_SCHEMA",
     "RECRUITMENT_SCHEMA",
