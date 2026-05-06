@@ -59,3 +59,10 @@ streaming:
   trigger_interval: "30 seconds"
   max_offsets_per_trigger: 50000
   starting_offsets: latest
+
+silver:
+  employees:
+    dq:
+      max_invalid_salary_pct:    0.10   # warn if > 10% salaries unparseable
+      max_invalid_date_pct:      0.10   # warn if > 10% joining dates invalid
+      max_unknown_department_pct: 0.05  # warn if > 5% depts not canonicalised
