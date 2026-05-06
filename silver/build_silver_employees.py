@@ -6,6 +6,12 @@ data-quality checks defined in ``silver/data_quality.py``, and writes the
 result as Parquet under ``data/silver/dim_employee/`` partitioned by the
 canonical department.
 
+Requirements
+------------
+* Java 26.0.1 (or 17/21/25 LTS). ``utils/spark.py`` injects the
+  ``--add-opens`` flags Spark 4 needs on Java 17+, so any of these work
+  out of the box.
+
 Run from the project root (Windows PowerShell):
 
     python -m silver.build_silver_employees                    # full reload

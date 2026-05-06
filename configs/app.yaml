@@ -35,9 +35,12 @@ spark:
   app_name: hcm-analytics
   shuffle_partitions: 8
   serializer: org.apache.spark.serializer.KryoSerializer
+  # Spark 4.x is built against Scala 2.13 (2.12 was dropped). The
+  # Hadoop 3.4 libraries it bundles fix the Java 24+ Subject.getSubject
+  # incompat, which is what makes Java 26.0.1 viable.
   packages:
-    - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
-    - io.delta:delta-spark_2.12:3.2.0
+    - org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0
+    - io.delta:delta-spark_2.13:4.0.0
 
 logging:
   level: INFO

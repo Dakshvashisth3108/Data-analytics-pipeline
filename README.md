@@ -31,26 +31,55 @@ The pipeline ingests four core HCM event streams:
 - **Silver** — Cleansed, deduplicated, type-cast, conformed. SCD-2 for slowly-changing dimensions.
 - **Gold** — Business-ready aggregates: headcount KPIs, attrition, attendance compliance, performance distributions, hiring funnel.
 
+## Prerequisites
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| **Java** | **26.0.1** (JDK) | Spark 4.0 + Hadoop 3.4 supports Java 17 / 21 / 25 / 26+. The project's `utils/spark.py` injects the required `--add-opens` flags for strong-encapsulation JDKs (Java 17+). |
+| **Python** | 3.10+ | Tested with 3.13 on Windows. |
+| **PySpark** | 4.0.0 | Pinned in `requirements.txt`. Spark 4 dropped Scala 2.12 — Kafka connector is `_2.13`. |
+| **Docker Desktop** | latest | For the Kafka + Zookeeper stack. |
+| **Hadoop winutils** | 3.4 | Windows only. Set `HADOOP_HOME` to a folder containing `bin\winutils.exe`. |
+
+```powershell
+# Verify Java 26 is the active JDK
+java -version            # -> openjdk version "26.0.1"
+echo $env:JAVA_HOME      # should point to your Java 26 install
+```
+
+If you have multiple JDKs installed, pin Java 26 for this session:
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-26.0.1+something"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+```
+
 ## Quickstart
 
-```bash
-# 1. Start the stack (Kafka, Zookeeper, Spark, Schema Registry)
-cd docker && docker compose up -d
+```powershell
+# 1. Start Kafka + Zookeeper
+docker compose up -d
 
-# 2. Install Python deps
+# 2. Create + activate a venv, then install Python deps
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# 3. Produce sample HCM events
-python -m producer.run --stream employees --rate 50
+# 3. Generate the synthetic 10k-row HCM dataset (one-time)
+python scripts/generate_hcm_dataset.py --rows 10000
 
-# 4. Run the bronze ingest job (Structured Streaming)
-spark-submit bronze/ingest_bronze.py --topic hcm.employees
+# 4. Stream the CSV into Kafka (continuous)
+python -m producer.csv_to_kafka --max-records 5000 --no-loop --delay 0
 
-# 5. Run silver/gold batch jobs
-spark-submit silver/build_silver_employees.py
-spark-submit gold/build_gold_headcount.py
+# 5. Bronze: Kafka -> raw parquet (Structured Streaming)
+python -m bronze.ingest_employee_stream --once
 
-# 6. Launch the dashboard
+# 6. Silver: clean + standardise -> dim_employee
+python -m silver.build_silver_employees
+
+# 7. Gold: business-ready marts
+python -m gold.build_employee_gold
+
+# 8. Launch the dashboard
 streamlit run streamlit_dashboard/app.py
 ```
 
