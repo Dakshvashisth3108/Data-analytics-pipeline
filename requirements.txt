@@ -4,15 +4,16 @@
 pyspark==4.0.0
 delta-spark==4.0.0
 
-# Kafka clients
-kafka-python==2.0.2
-confluent-kafka==2.5.0
+# Kafka client (confluent-kafka is the one we use; 2.6+ ships Python 3.13 wheels).
+confluent-kafka>=2.6.0,<3.0.0
 
 # Config / data tooling
+# pyarrow 18+ is the first version with Python 3.13 wheels — older ones fall
+# back to a source build that fails on 3.13's setuptools changes.
 pyyaml==6.0.2
 faker==30.3.0
 pandas==2.2.3
-pyarrow==17.0.0
+pyarrow>=18.0.0,<21.0.0
 python-dotenv==1.0.1
 structlog==24.4.0
 
