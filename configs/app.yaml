@@ -17,6 +17,7 @@ kafka:
 
 topics:
   employees:    hcm.employees
+  employee_csv: hcm_employee_data
   attendance:   hcm.attendance
   performance:  hcm.performance
   recruitment:  hcm.recruitment
@@ -46,6 +47,13 @@ logging:
 producer:
   default_rate_per_sec: 25
   seed: 42
+  csv:
+    default_path: data/raw/hcm_employees.csv
+    delay_seconds: 0.05      # ~20 msg/s — feels real-time without flooding
+    jitter: 0.5              # +/- 50% of delay for organic variability
+    loop: true               # restart from row 0 when file ends
+    progress_every: 1000
+    flush_timeout_seconds: 30
 
 streaming:
   trigger_interval: "30 seconds"
