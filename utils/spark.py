@@ -37,9 +37,7 @@ from .logger import get_logger
 
 _LOG = get_logger("hcm.utils.spark")
 
-# Standard set of opens documented by the Spark project for JDK 17+.
-# Java 24+ requires the same set; Spark 4.x + Hadoop 3.4 don't add
-# anything new beyond this list.
+# Standard set of opens (reflective access) for Spark on JDK 17+.
 JAVA_OPENS: list[str] = [
     "java.base/java.lang=ALL-UNNAMED",
     "java.base/java.lang.invoke=ALL-UNNAMED",
@@ -54,22 +52,39 @@ JAVA_OPENS: list[str] = [
     "java.base/sun.nio.cs=ALL-UNNAMED",
     "java.base/sun.security.action=ALL-UNNAMED",
     "java.base/sun.util.calendar=ALL-UNNAMED",
+    "java.base/jdk.internal.ref=ALL-UNNAMED",        # ByteBuffer Cleaner
+    "java.base/jdk.internal.misc=ALL-UNNAMED",       # Unsafe-related internals
     "java.security.jgss/sun.security.krb5=ALL-UNNAMED",
+]
+
+# Internal packages Spark resolves via Class.forName / direct usage.
+# Java 24+ blocks these without --add-exports even if --add-opens is set.
+JAVA_EXPORTS: list[str] = [
+    "java.base/jdk.internal.ref=ALL-UNNAMED",
+    "java.base/jdk.internal.misc=ALL-UNNAMED",
+    "java.base/sun.nio.ch=ALL-UNNAMED",
+    "java.base/sun.security.action=ALL-UNNAMED",
 ]
 
 
 def _java_options() -> str:
-    """Build the ``--add-opens`` argument string."""
-    return " ".join(f"--add-opens={o}" for o in JAVA_OPENS)
+    """Build the ``--add-opens`` + ``--add-exports`` argument string."""
+    parts = [f"--add-opens={o}"   for o in JAVA_OPENS]
+    parts += [f"--add-exports={e}" for e in JAVA_EXPORTS]
+    return " ".join(parts)
 
 
 def _ensure_jvm_compat() -> None:
-    """Inject JDK 17+ / 24+ / 26 compat flags before any JVM is spawned."""
+    """Inject JDK 17+ / 24+ / 26 compat flags before any JVM is spawned.
+
+    Idempotent: re-imports / re-runs don't double the env var.
+    """
     flags = _java_options()
     existing = os.environ.get("JAVA_TOOL_OPTIONS", "")
-    # Only append if not already present, so re-runs don't bloat the env.
-    if "--add-opens=java.base/java.lang=ALL-UNNAMED" not in existing:
-        os.environ["JAVA_TOOL_OPTIONS"] = (existing + " " + flags).strip()
+    # Replace wholesale so we don't carry over a stale (incomplete) flag set
+    # from an earlier import of an older spark.py module.
+    if "--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED" not in existing:
+        os.environ["JAVA_TOOL_OPTIONS"] = flags
 
 
 def _preflight_windows_hadoop() -> None:

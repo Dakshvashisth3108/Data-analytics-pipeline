@@ -1,7 +1,10 @@
-# PySpark 4.0+ ships with Hadoop 3.4+, which fixes the
-# `Subject.getSubject is not supported` failure on Java 24+ that
-# Spark 3.5.x trips on. Required for Java 26.
-pyspark==4.0.0
+# PySpark 4.x. Note: Spark 4.x bundles Hadoop 3.4.1 which still calls
+# Subject.getSubject() in UserGroupInformation -- that method is
+# permanently disabled in Java 24+. So Spark on Java 26 fails at
+# startup. Use Java 21 LTS for the Spark jobs (see
+# scripts/setup_java21.ps1 + scripts/spark-env.ps1). Once Spark
+# bundles Hadoop 3.4.2+, this constraint will go away.
+pyspark==4.1.1
 delta-spark==4.0.0
 
 # Kafka client (confluent-kafka is the one we use; 2.6+ ships Python 3.13 wheels).
