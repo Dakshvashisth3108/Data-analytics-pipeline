@@ -121,11 +121,13 @@ def clean_salary(df: DataFrame) -> DataFrame:
 def clean_joining_date(df: DataFrame) -> DataFrame:
     """Parse joining_date with strict ISO format. Invalid -> null.
 
-    Spark's `to_date` returns null for unparseable strings. We additionally
+    Spark 4.x ANSI mode makes `to_date` throw on unparseable strings,
+    which would crash the whole job on a single bad row. `try_to_date`
+    is the ANSI-safe equivalent that returns NULL. We additionally
     reject implausibly old (< 1950) or future-dated rows, since both
     signal source-system corruption.
     """
-    parsed = F.to_date(F.col("joining_date"), "yyyy-MM-dd")
+    parsed = F.try_to_date(F.col("joining_date"), "yyyy-MM-dd")
     today  = F.current_date()
     valid_range = (
         (F.year(parsed) >= MIN_PLAUSIBLE_YEAR)

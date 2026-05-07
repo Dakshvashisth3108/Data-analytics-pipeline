@@ -35,12 +35,13 @@ spark:
   app_name: hcm-analytics
   shuffle_partitions: 8
   serializer: org.apache.spark.serializer.KryoSerializer
-  # Spark 4.x is built against Scala 2.13 (2.12 was dropped). The
-  # Hadoop 3.4 libraries it bundles fix the Java 24+ Subject.getSubject
-  # incompat, which is what makes Java 26.0.1 viable.
+  # Connector jars MUST match the Spark runtime's major.minor (binary
+  # API changes between minors). pyspark 4.1.1 -> connector 4.1.1.
+  # Delta is omitted -- the project writes plain Parquet only; if you
+  # later switch the Silver/Gold sinks to Delta, add:
+  #   - io.delta:delta-spark_2.13:<version-matched-to-spark>
   packages:
-    - org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0
-    - io.delta:delta-spark_2.13:4.0.0
+    - org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.1
 
 logging:
   level: INFO

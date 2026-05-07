@@ -160,11 +160,16 @@ def write_bronze(parsed: DataFrame, output: str, checkpoint: str,
         .outputMode("append")
         .queryName(f"bronze_{STREAM_NAME}")
     )
-    writer = writer.trigger(once=True) if once else writer.trigger(processingTime=trigger_interval)
+    # Spark 4.x deprecated trigger(once=True) -- use availableNow which
+    # processes every available offset and then stops.
+    writer = (
+        writer.trigger(availableNow=True) if once
+        else writer.trigger(processingTime=trigger_interval)
+    )
 
     LOG.info(
         "starting_query name=bronze_%s output=%s checkpoint=%s mode=%s",
-        STREAM_NAME, output, checkpoint, "once" if once else trigger_interval,
+        STREAM_NAME, output, checkpoint, "availableNow" if once else trigger_interval,
     )
     return writer.start()
 
@@ -227,6 +232,14 @@ def main() -> int:
         LOG.exception("query_terminated_abnormally")
         return 5
 
+    # Log how many rows ended up landing — useful for --once / --availableNow.
+    last = query.lastProgress
+    if last:
+        LOG.info("query_complete batchId=%s inputRows=%s sources=%s",
+                 last.get("batchId"), last.get("numInputRows"),
+                 [s.get("description") for s in (last.get("sources") or [])])
+    else:
+        LOG.info("query_complete (no batches processed -- nothing was available)")
     return 0
 
 
