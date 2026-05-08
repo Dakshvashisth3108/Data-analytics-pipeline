@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import streamlit as st
 
-from streamlit_dashboard.components import _bootstrap  # noqa: F401  -- sys.path
-from streamlit_dashboard.components.charts import bar, line
-from streamlit_dashboard.components.data_loader import (
+from components import _bootstrap  # noqa: F401  -- sys.path
+from components.charts import bar, line
+from components.data_loader import (
     empty_state,
     have_data,
     load_gold,
 )
-from streamlit_dashboard.components.theme import apply_theme
+from components.theme import apply_theme
 
 apply_theme(title="HCM Analytics", icon=":bar_chart:")
 

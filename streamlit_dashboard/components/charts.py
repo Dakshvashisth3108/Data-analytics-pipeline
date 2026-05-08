@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from streamlit_dashboard.components.theme import PALETTE, PLOTLY_DISCRETE
+from components.theme import PALETTE, PLOTLY_DISCRETE
 
 
 def _layout(fig: go.Figure, *, title: str | None = None,

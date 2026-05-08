@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import streamlit as st
 
-from streamlit_dashboard.components import _bootstrap  # noqa: F401
-from streamlit_dashboard.components.charts import bar, scatter
-from streamlit_dashboard.components.data_loader import (
+from components import _bootstrap  # noqa: F401
+from components.charts import bar, scatter
+from components.data_loader import (
     empty_state, have_data, load_gold,
 )
-from streamlit_dashboard.components.filters import (
+from components.filters import (
     apply_dimension_filter, department_filter,
 )
-from streamlit_dashboard.components.theme import apply_theme
+from components.theme import apply_theme
 
 apply_theme(title="HCM — Performance")
 st.title("Performance Analytics")
