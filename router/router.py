@@ -48,6 +48,8 @@ class RouterResponse:
     sql_columns: list[str] = field(default_factory=list)
     sql_rows: list[dict[str, Any]] = field(default_factory=list)
     sql_row_count: int = 0
+    sql_raw_model_output: str | None = None   # raw LLM SQL response (for debugging)
+    sql_error: str | None = None              # SQL-stage error (separate from top-level)
     rag_chunks: list[dict[str, Any]] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)
 
@@ -165,10 +167,12 @@ class HybridRouter:
 
         # 4. Populate response payload
         if sql_answer is not None:
-            resp.sql           = sql_answer.sql
-            resp.sql_columns   = sql_answer.columns
-            resp.sql_rows      = sql_answer.rows[:50]   # cap payload
-            resp.sql_row_count = sql_answer.row_count
+            resp.sql                   = sql_answer.sql
+            resp.sql_columns           = sql_answer.columns
+            resp.sql_rows              = sql_answer.rows[:50]   # cap payload
+            resp.sql_row_count         = sql_answer.row_count
+            resp.sql_raw_model_output  = sql_answer.raw_model_output
+            resp.sql_error             = sql_answer.error
             resp.sources.extend(sql_answer.referenced_tables)
         if chunks:
             resp.rag_chunks = [

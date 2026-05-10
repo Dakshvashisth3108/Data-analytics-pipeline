@@ -39,15 +39,24 @@ _SYSTEM_PROMPT = (
 
 
 def _format_sql_block(sql_result) -> str:
-    """Render a SQL AnswerResult as a compact ASCII table for the prompt."""
+    """Render a SQL AnswerResult as a compact ASCII table for the prompt.
+
+    When the SQL ran but returned 0 rows we surface the actual query
+    so the LLM can either accept "no matches" as the answer OR (more
+    useful for small models) realise it picked the wrong table.
+    """
     if sql_result is None:
         return "(no SQL result)"
     if sql_result.error:
-        return f"(SQL error: {sql_result.error})"
+        return f"(SQL error: {sql_result.error})\nGenerated SQL: {sql_result.sql or '-'}"
     if sql_result.cannot_answer:
         return "(SQL engine declined: " + (sql_result.sql or "")[:200] + ")"
     if not sql_result.rows:
-        return "(SQL returned no rows)"
+        return (
+            f"SQL ran successfully but returned 0 rows.\n"
+            f"Generated SQL: {sql_result.sql or '-'}\n"
+            f"Referenced tables: {sql_result.referenced_tables}"
+        )
     cols = sql_result.columns
     head = " | ".join(cols)
     rows = "\n".join(
@@ -127,7 +136,11 @@ class AnswerSynthesizer:
         if intent is Intent.ANALYTICAL:
             sections.append(
                 "\nAnswer the question using the SQL result above. "
-                "Cite specific numbers; do not speculate beyond the rows shown."
+                "Cite specific numbers; do not speculate beyond the rows shown. "
+                "If the SQL returned 0 rows, DO NOT claim the dataset lacks "
+                "the requested information -- the data is present; the query "
+                "simply didn't match. Tell the user 'the SQL returned no "
+                "matches' and suggest they rephrase the question."
             )
         elif intent is Intent.SEMANTIC:
             sections.append(

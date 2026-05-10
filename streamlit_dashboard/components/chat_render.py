@@ -71,15 +71,17 @@ def render_assistant_message(response: dict[str, Any]) -> None:
         if response.get("error"):
             st.error(response["error"])
 
-        # Detail tabs — only show those that have content
-        has_sql = bool(response.get("sql_rows"))
+        # Detail tabs — show SQL whenever any SQL was generated (even if
+        # it returned 0 rows), so the user can debug what the LLM did.
+        has_sql_data = bool(response.get("sql_rows"))
+        has_any_sql = bool(response.get("sql")) or bool(response.get("sql_raw_model_output"))
         has_rag = bool(response.get("rag_chunks"))
-        sources = response.get("sources") or []
         has_trace = bool(response.get("intent"))
 
         tab_labels: list[str] = []
-        if has_sql:
+        if has_sql_data:
             tab_labels.append("📊 Chart")
+        if has_any_sql:
             tab_labels.append("🗒 SQL")
         if has_rag:
             tab_labels.append("📚 Sources")
@@ -92,10 +94,11 @@ def render_assistant_message(response: dict[str, Any]) -> None:
         tabs = st.tabs(tab_labels)
         idx = 0
 
-        if has_sql:
+        if has_sql_data:
             with tabs[idx]:
                 _render_chart_tab(response)
             idx += 1
+        if has_any_sql:
             with tabs[idx]:
                 _render_sql_tab(response)
             idx += 1
@@ -126,8 +129,12 @@ def _render_chart_tab(response: dict) -> None:
 
 
 def _render_sql_tab(response: dict) -> None:
-    sql = response.get("sql") or "(no SQL generated)"
-    st.code(sql, language="sql")
+    sql = response.get("sql")
+    if sql:
+        st.code(sql, language="sql")
+    else:
+        st.info("No SQL was generated. The model may have declined or errored.")
+
     cols = response.get("sql_columns") or []
     rows = response.get("sql_rows") or []
     total = response.get("sql_row_count", len(rows))
@@ -136,9 +143,21 @@ def _render_sql_tab(response: dict) -> None:
         st.dataframe(df, use_container_width=True)
         if total > len(rows):
             st.caption(f"Showing {len(rows)} of {total} rows.")
-    tables = ", ".join(response.get("sources", []) or [])
-    if tables:
-        st.caption(f"Tables: {tables}")
+    elif sql:
+        st.warning(
+            "SQL ran successfully but returned 0 rows. "
+            "The model likely picked the wrong table or filter — "
+            "try rephrasing or check the schema below."
+        )
+
+    tables = response.get("sources", []) or []
+    sql_tables = [t for t in tables if not t.count(".")]
+    if sql_tables:
+        st.caption("Tables: " + ", ".join(sql_tables))
+
+    sql_err = response.get("sql_error")
+    if sql_err:
+        st.error(f"SQL stage error: {sql_err}")
 
 
 def _render_sources_tab(response: dict) -> None:
@@ -181,3 +200,9 @@ def _render_trace_tab(response: dict) -> None:
     }
     timing_df = pd.DataFrame([t])
     st.dataframe(timing_df, hide_index=True, use_container_width=True)
+
+    # Raw LLM output (debugging Gemma's SQL generation)
+    raw = response.get("sql_raw_model_output")
+    if raw:
+        with st.expander("Raw LLM output (SQL stage)"):
+            st.code(raw, language="markdown")
