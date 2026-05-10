@@ -71,6 +71,35 @@ silver:
       max_invalid_date_pct:      0.10   # warn if > 10% joining dates invalid
       max_unknown_department_pct: 0.05  # warn if > 5% depts not canonicalised
 
+# Natural-language to SQL — Ollama (Gemma 2B by default) + DuckDB on Gold parquet.
+# "Gemini 2B" is informally used for Google's open-weights Gemma 2B model;
+# the actual Ollama tag is gemma2:2b. Override via env or here.
+nl2sql:
+  ollama:
+    base_url: http://localhost:11434
+    model: gemma2:2b
+    timeout_seconds: 120
+    temperature: 0.1
+    num_predict: 512                # max tokens
+  duckdb:
+    gold_root: data/gold            # mount every <domain>/<metric>/ as a view
+    default_row_limit: 500          # injected when the LLM forgets a LIMIT
+    max_result_rows: 10000          # hard cap on returned rows
+  safety:
+    allowed_statement_kinds: [Select, With]
+    blocked_keywords:
+      - ATTACH
+      - COPY
+      - INSTALL
+      - LOAD
+      - PRAGMA
+      - SET
+      - EXPORT
+      - IMPORT
+      - "READ_TEXT"
+      - "READ_BLOB"
+    max_sql_length_chars: 4000
+
 # Embeddings / RAG
 # Reads Gold parquet -> produces narrative business insights -> embeds them ->
 # writes to ChromaDB at ``vectors_dir``. No Spark required (pure pandas).
