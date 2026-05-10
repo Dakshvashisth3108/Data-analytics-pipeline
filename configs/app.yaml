@@ -100,6 +100,22 @@ nl2sql:
       - "READ_BLOB"
     max_sql_length_chars: 4000
 
+# Hybrid conversational router — intent -> SQL / RAG / both.
+router:
+  conversation:
+    history_turns: 6
+  classifier:
+    enable_rule_tier: true
+    enable_llm_tier:  true
+    # If the rule-based scorer reaches this confidence, skip the LLM call.
+    rule_confidence_threshold: 0.75
+  rag:
+    top_k: 5
+    min_similarity: 0.0
+  synthesizer:
+    max_output_chars: 1200
+    temperature: 0.2
+
 # Embeddings / RAG
 # Reads Gold parquet -> produces narrative business insights -> embeds them ->
 # writes to ChromaDB at ``vectors_dir``. No Spark required (pure pandas).
