@@ -70,3 +70,14 @@ silver:
       max_invalid_salary_pct:    0.10   # warn if > 10% salaries unparseable
       max_invalid_date_pct:      0.10   # warn if > 10% joining dates invalid
       max_unknown_department_pct: 0.05  # warn if > 5% depts not canonicalised
+
+# Embeddings / RAG
+# Reads Gold parquet -> produces narrative business insights -> embeds them ->
+# writes to ChromaDB at ``vectors_dir``. No Spark required (pure pandas).
+embeddings:
+  model: sentence-transformers/all-MiniLM-L6-v2   # 384-dim, ~80MB, fast
+  vectors_dir: data/vectors/chroma                # persistent ChromaDB store
+  collection_name: hcm_insights
+  batch_size: 32
+  currency_label: "INR"                            # used in chunk text
+  top_n_for_lists: 5

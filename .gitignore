@@ -12,7 +12,12 @@ data/silver/*
 data/gold/*
 data/checkpoints/*
 data/raw/*
+data/vectors/*
 !data/**/.gitkeep
+
+# sentence-transformers model cache (downloaded on first run)
+.cache/
+~/.cache/huggingface/
 
 # Logs
 logs/*.log
