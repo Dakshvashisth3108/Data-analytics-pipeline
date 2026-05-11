@@ -22,6 +22,7 @@ from .prompts import (
     SYSTEM_PROMPT, build_user_prompt, extract_sql, is_cannot_answer,
 )
 from .schema_introspect import SchemaCatalog, build_catalog
+from .sql_repair import repair_bare_tables
 from .sql_validator import UnsafeSQLError, validate_sql
 
 LOG = get_logger("hcm.nl2sql.engine")
@@ -107,6 +108,17 @@ class NL2SQLEngine:
             result.cannot_answer = True
             result.sql = sql
             return result
+
+        # 2b. Auto-repair common LLM hallucinations:
+        #     `FROM attrition` -> `FROM attrition_by_country` (etc.)
+        #     using question keywords to pick the right view.
+        allowed_views = self.catalog.view_names()
+        try:
+            sql, _repaired = repair_bare_tables(sql, question, allowed_views)
+            if _repaired:
+                LOG.info("sql_auto_repaired remap=%s", _repaired)
+        except Exception:
+            LOG.exception("sql_repair_failed")  # non-fatal; validation will catch it
 
         # 3. Validate
         try:

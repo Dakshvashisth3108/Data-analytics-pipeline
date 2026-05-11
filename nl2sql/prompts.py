@@ -21,7 +21,22 @@ import re
 SYSTEM_PROMPT = """You are a careful data analyst. Translate the user's
 question into a single DuckDB-compatible SELECT (or WITH/SELECT) query.
 
-Rules:
+CRITICAL TABLE NAMING RULE
+==========================
+Every table name in this database follows the pattern
+`<domain>_<metric>` (with underscore). There is NEVER a bare table
+called `attrition`, `salary`, `workforce`, or `performance`.
+
+Wrong:   FROM attrition          FROM salary             FROM performance
+Right:   FROM attrition_by_country
+         FROM salary_by_department
+         FROM performance_top_teams
+         (etc., as listed in the schema below)
+
+If you write a bare name like `FROM attrition`, the query WILL FAIL.
+
+Other rules
+-----------
 - Output ONLY the SQL inside a fenced code block: ```sql ... ```
 - Use ONLY the tables and columns listed in the schema below.
 - Do NOT invent columns or tables. If a needed concept is missing,
