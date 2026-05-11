@@ -117,6 +117,31 @@ class AnswerSynthesizer:
         if intent is Intent.OFFTOPIC:
             return _OFFTOPIC_REPLY, 0
 
+        # Deterministic short-circuit: ANALYTICAL + 0 rows + no chunks.
+        # Skip the LLM entirely -- a small model will misapply templated
+        # phrases ("no matches") even when rows are present. The fast path
+        # gives the user a precise message tied to the actual SQL.
+        has_rows   = sql_result is not None and bool(sql_result.rows)
+        has_chunks = bool(chunks)
+        if intent is Intent.ANALYTICAL and not has_rows:
+            if sql_result is not None and sql_result.error:
+                return (
+                    f"The SQL query failed: {sql_result.error}. "
+                    f"Generated SQL: {sql_result.sql or '(none)'}"
+                ), 0
+            if sql_result is not None and sql_result.sql:
+                return (
+                    f"The SQL ran successfully but returned 0 rows. "
+                    f"Try rephrasing your question — the model may have "
+                    f"chosen the wrong table or filter.\n\n"
+                    f"SQL it ran: `{sql_result.sql}`"
+                ), 0
+            return (
+                "I couldn't generate a SQL query for that. "
+                "Try rephrasing — e.g. 'which department has the highest "
+                "attrition rate?'"
+            ), 0
+
         if self.ollama is None:
             return self._fallback_text(intent, sql_result, chunks), 0
 
@@ -135,12 +160,10 @@ class AnswerSynthesizer:
 
         if intent is Intent.ANALYTICAL:
             sections.append(
-                "\nAnswer the question using the SQL result above. "
-                "Cite specific numbers; do not speculate beyond the rows shown. "
-                "If the SQL returned 0 rows, DO NOT claim the dataset lacks "
-                "the requested information -- the data is present; the query "
-                "simply didn't match. Tell the user 'the SQL returned no "
-                "matches' and suggest they rephrase the question."
+                "\nAnswer the question using the SQL rows above. "
+                "Cite specific numbers from the rows. "
+                "Do not speculate beyond what the rows show. "
+                "Lead with the direct answer in the first sentence."
             )
         elif intent is Intent.SEMANTIC:
             sections.append(

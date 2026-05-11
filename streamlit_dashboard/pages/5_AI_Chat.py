@@ -92,6 +92,16 @@ if st.sidebar.button("🧹  Clear conversation", use_container_width=True):
     reset_router_conversation()
     st.rerun()
 
+if st.sidebar.button(
+    "🔄  Reload router (pick up code changes)",
+    use_container_width=True,
+    help="Drops the cached HybridRouter so newly edited code is picked up "
+         "without restarting Streamlit."
+):
+    st.session_state.messages = []
+    get_router.clear()                # invalidates @st.cache_resource
+    st.rerun()
+
 st.sidebar.checkbox(
     "Show traces by default", value=False,
     key="show_traces",
