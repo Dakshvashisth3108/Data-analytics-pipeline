@@ -1,0 +1,31 @@
+# ===========================================================================
+# Streamlit server configuration — used INSIDE the Docker container.
+# Copied to /app/.streamlit/config.toml in the image; Streamlit auto-loads
+# any config.toml found in the working directory's .streamlit/ folder.
+# ===========================================================================
+
+[server]
+# Listen on all interfaces — required so the port is reachable from
+# OUTSIDE the container. "localhost" would only bind the container's
+# internal loopback and `docker run -p` would see nothing.
+address = "0.0.0.0"
+port = 8501
+
+# headless = no attempt to open a local browser (there's no browser in a
+# container) and no "email" prompt on first run.
+headless = true
+
+# No source-file hot-reloading inside an immutable container image.
+fileWatcherType = "none"
+
+# CORS/XSRF: this first cut assumes you reach the app directly on
+# localhost:8501. If you later put it behind a reverse proxy, revisit these.
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+# Don't phone home with usage statistics.
+gatherUsageStats = false
+
+[theme]
+base = "dark"

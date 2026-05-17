@@ -1,0 +1,63 @@
+# ===========================================================================
+# .dockerignore — files EXCLUDED from the Docker build context.
+#
+# When you run `docker build`, Docker first uploads the build context (the
+# project folder) to the Docker daemon. Anything listed here is skipped:
+#   * faster builds (smaller context upload)
+#   * smaller images (excluded files can't accidentally be COPYied in)
+#   * no secrets / no multi-GB data folders baked into layers
+# ===========================================================================
+
+# --- Python virtual environments (rebuilt inside the image) ---
+.venv/
+venv/
+ENV/
+
+# --- The data lake — MOUNTED as a volume at run time, never baked in ---
+# This is the big one: data/ can be many GB. The container gets it via
+# a -v volume mount, so it must NOT be in the build context.
+data/
+
+# --- Runtime logs ---
+logs/
+
+# --- Git internals ---
+.git/
+.gitignore
+.gitattributes
+
+# --- Python caches / build artefacts ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Pipeline code the Streamlit image does NOT need ---
+# The dashboard reads parquet output, not these packages' source.
+producer/
+consumer/
+bronze/
+silver/
+gold/
+schemas/
+notebooks/
+tests/
+
+# --- Spark / Java helper scripts (pipeline-side only) ---
+scripts/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# --- Docs + IDE noise ---
+*.md
+.vscode/
+.idea/
+*.iml
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+desktop.ini

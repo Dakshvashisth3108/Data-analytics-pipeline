@@ -1,0 +1,56 @@
+# ===========================================================================
+# docker-compose for the Streamlit dashboard container — ONLY.
+#
+# This is the incremental first step of dockerizing the platform:
+#   * Kafka / Zookeeper / Spark are NOT here (they stay as-is for now).
+#   * Ollama is NOT here — it keeps running on the host.
+#
+# `docker compose up` from this folder builds the image (if needed) and
+# starts the one container with the right ports, volumes, env, and the
+# host.docker.internal mapping all wired in for you.
+# ===========================================================================
+
+services:
+  streamlit:
+    build:
+      # Build context is the PROJECT ROOT (two levels up) so the Dockerfile's
+      # COPY instructions can reach configs/, utils/, router/, etc.
+      context: ../..
+      dockerfile: docker/streamlit/Dockerfile
+    image: hcm-analytics-streamlit:latest
+    container_name: hcm-streamlit
+
+    # Publish container port 8501 -> host port 8501.
+    ports:
+      - "8501:8501"
+
+    environment:
+      # The project's config loader maps DOUBLE-UNDERSCORE env vars onto
+      # configs/app.yaml. This one overrides nl2sql.ollama.base_url so the
+      # container talks to Ollama running on the HOST, not inside itself.
+      NL2SQL__OLLAMA__BASE_URL: "http://host.docker.internal:11434"
+      LOG_LEVEL: "INFO"
+
+    volumes:
+      # Mount the host's pipeline output INTO the container.
+      #   gold parquet  -> read-only  (the dashboard only queries it)
+      #   chroma index  -> read-write (ChromaDB opens its SQLite for writing
+      #                                even on read paths / WAL housekeeping)
+      - ../../data/gold:/app/data/gold:ro
+      - ../../data/vectors:/app/data/vectors
+
+    extra_hosts:
+      # On Linux, host.docker.internal isn't defined by default — this maps
+      # it to the host gateway. On Windows/Mac Docker Desktop it already
+      # works, and this line is harmless there.
+      - "host.docker.internal:host-gateway"
+
+    restart: unless-stopped
+
+    # Surfaces the Dockerfile HEALTHCHECK in `docker compose ps`.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
